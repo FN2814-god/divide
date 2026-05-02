@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Divide — Divide la cuenta, no la amistad</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg:       '#0d0d1a',
+            surface:  '#13132b',
+            card:     '#1a1a3e',
+            border:   '#2d2d6e',
+            cyan:     '#00f5ff',
+            magenta:  '#ff00a0',
+            violet:   '#7c3aed',
+            muted:    '#6b7280',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          boxShadow: {
+            neon:   '0 0 12px rgba(0,245,255,0.25)',
+            nmag:   '0 0 12px rgba(255,0,160,0.25)',
+            card:   '0 4px 24px rgba(0,0,0,0.5)',
+          },
+        },
+      },
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { background-color: #0d0d1a; color: #e2e8f0; }
+
+    /* Glow inputs on focus */
+    .input-glow:focus {
+      outline: none;
+      border-color: #00f5ff;
+      box-shadow: 0 0 0 2px rgba(0,245,255,0.2);
+    }
+    .input-select:focus {
+      outline: none;
+      border-color: #7c3aed;
+      box-shadow: 0 0 0 2px rgba(124,58,237,0.25);
+    }
+
+    /* Persona card entrance animation */
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .card-enter { animation: slideIn 0.25s ease-out; }
+
+    /* Flicker on zero */
+    @keyframes flicker {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.7; }
+    }
+    .flicker { animation: flicker 1.2s infinite; }
+
+    /* Progress bar glow */
+    #progress-bar {
+      transition: width 0.4s ease, background-color 0.4s ease;
+    }
+
+    /* Scrollable main area leaves room for floating panel */
+    main { padding-bottom: 140px; }
+
+    /* Hide number input arrows */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #13132b; }
+    ::-webkit-scrollbar-thumb { background: #2d2d6e; border-radius: 2px; }
+
+    /* Neon border glow on card hover */
+    .persona-card:hover { border-color: rgba(0,245,255,0.35); }
+  </style>
+</head>
+<body class="font-sans min-h-screen">
+
+  <!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+  <header class="sticky top-0 z-30 bg-[#0d0d1a]/90 backdrop-blur border-b border-[#2d2d6e]">
+    <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <!-- Logo icon -->
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center"
+             style="background: linear-gradient(135deg,#7c3aed,#00f5ff)">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none"
+               viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M12 6v.01M12 12v.01M12 18v.01M6 12h12"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-base font-bold leading-none tracking-wider" style="color:#00f5ff">DIVIDE</h1>
+          <p class="text-[10px] text-[#6b7280] leading-none mt-0.5">Divide la cuenta, no la amistad</p>
+        </div>
+      </div>
+      <!-- Persona count badge -->
+      <div class="flex items-center gap-1.5 text-xs text-[#6b7280]">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M17 20h5v-2a4 4 0 00-5-3.87M9 20H4v-2a4 4 0 015-3.87m6 5.87a4 4 0 10-8 0M15 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+        </svg>
+        <span id="persona-count">0</span> personas
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════ MAIN ═══════════════════════════ -->
+  <main class="max-w-lg mx-auto px-4 pt-5">
+
+    <!-- ───── PANEL GLOBAL ───── -->
+    <section class="rounded-2xl border border-[#2d2d6e] p-4 mb-5"
+             style="background:#13132b; box-shadow:0 4px 24px rgba(0,0,0,0.5)">
+      <h2 class="text-xs font-semibold uppercase tracking-widest mb-3" style="color:#7c3aed">
+        Datos de la Cuenta
+      </h2>
+
+      <div class="grid grid-cols-2 gap-3">
+        <!-- Monto total -->
+        <div class="col-span-2">
+          <label class="block text-xs text-[#6b7280] mb-1.5 font-medium">Monto Total de la Cuenta</label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[#00f5ff] font-bold text-sm">$</span>
+            <input id="total-cuenta"
+                   type="number" inputmode="decimal" placeholder="0.00" min="0" step="0.01"
+                   class="input-glow w-full bg-[#0d0d1a] border border-[#2d2d6e] rounded-xl
+                          text-white text-lg font-semibold pl-7 pr-4 py-3.5
+                          placeholder-[#3a3a6e] transition-all"
+                   oninput="recalcular()" />
+          </div>
+        </div>
+
+        <!-- Tasa de cambio -->
+        <div class="col-span-2">
+          <label class="block text-xs text-[#6b7280] mb-1.5 font-medium">Tasa de Cambio (Bs / $)</label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[#ff00a0] font-bold text-sm">Bs</span>
+            <input id="tasa-cambio"
+                   type="number" inputmode="numeric" placeholder="0" min="0" step="1"
+                   class="input-glow w-full bg-[#0d0d1a] border border-[#2d2d6e] rounded-xl
+                          text-white text-lg font-semibold pl-10 pr-4 py-3.5
+                          placeholder-[#3a3a6e] transition-all"
+                   oninput="recalcular()" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── PARTICIPANTES ───── -->
+    <section>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-xs font-semibold uppercase tracking-widest" style="color:#7c3aed">
+          Participantes
+        </h2>
+        <span id="total-recolectado-inline" class="text-xs text-[#6b7280]"></span>
+      </div>
+
+      <!-- Lista de tarjetas -->
+      <div id="personas-container" class="flex flex-col gap-3"></div>
+
+      <!-- Estado vacío -->
+      <div id="empty-state"
+           class="flex flex-col items-center justify-center py-10 text-center rounded-2xl border border-dashed border-[#2d2d6e] mt-2">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center mb-3"
+             style="background:rgba(124,58,237,0.15)">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" style="color:#7c3aed"
+               fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-5-3.87M9 20H4v-2a4 4 0 015-3.87m6 5.87a4 4 0 10-8 0M15 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+          </svg>
+        </div>
+        <p class="text-sm font-medium text-[#4a4a8a]">Aún no hay personas</p>
+        <p class="text-xs text-[#3a3a6e] mt-1">Toca el botón para añadir</p>
+      </div>
+
+      <!-- Botón añadir persona -->
+      <button id="btn-agregar"
+              onclick="agregarPersona()"
+              class="mt-4 w-full py-4 rounded-2xl font-semibold text-sm tracking-wide
+                     border border-[#2d2d6e] text-[#00f5ff] transition-all active:scale-95
+                     hover:border-[#00f5ff] hover:bg-[#00f5ff]/5"
+              style="background:#13132b">
+        <span class="flex items-center justify-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
+               viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+          </svg>
+          Añadir Persona
+        </span>
+      </button>
+    </section>
+
+  </main>
+
+  <!-- ═══════════════════════════ PANEL FLOTANTE INFERIOR ═══════════════════════════ -->
+  <div id="floating-panel"
+       class="fixed bottom-0 left-0 right-0 z-40 border-t border-[#2d2d6e]"
+       style="background:#13132b; box-shadow:0 -8px 32px rgba(0,0,0,0.6)">
+
+    <div class="max-w-lg mx-auto px-4 pt-3 pb-5">
+
+      <!-- Barra de progreso -->
+      <div class="h-1.5 bg-[#0d0d1a] rounded-full overflow-hidden mb-3">
+        <div id="progress-bar" class="h-full rounded-full" style="width:0%;background:#7c3aed"></div>
+      </div>
+
+      <!-- Stats row -->
+      <div class="grid grid-cols-3 gap-2 text-center">
+        <!-- Recolectado -->
+        <div class="rounded-xl py-2 px-1" style="background:rgba(0,245,255,0.07)">
+          <p class="text-[10px] text-[#6b7280] uppercase tracking-wide mb-0.5">Recolectado</p>
+          <p id="stat-recolectado" class="text-base font-bold" style="color:#00f5ff">$0.00</p>
+        </div>
+
+        <!-- Estado central (falta / cuadrado / vuelto) -->
+        <div id="stat-estado-wrap" class="rounded-xl py-2 px-1 col-span-1"
+             style="background:rgba(124,58,237,0.12)">
+          <p class="text-[10px] text-[#6b7280] uppercase tracking-wide mb-0.5" id="stat-estado-label">Estado</p>
+          <p id="stat-estado-valor" class="text-base font-bold" style="color:#7c3aed">—</p>
+        </div>
+
+        <!-- Total cuenta -->
+        <div class="rounded-xl py-2 px-1" style="background:rgba(255,0,160,0.07)">
+          <p class="text-[10px] text-[#6b7280] uppercase tracking-wide mb-0.5">Cuenta</p>
+          <p id="stat-cuenta" class="text-base font-bold" style="color:#ff00a0">$0.00</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Template oculto para tarjeta de persona (clonado por JS) -->
+  <template id="persona-template">
+    <div class="persona-card card-enter rounded-2xl border border-[#2d2d6e] p-4 transition-all"
+         style="background:#1a1a3e; box-shadow:0 4px 24px rgba(0,0,0,0.5)">
+
+      <!-- Header tarjeta -->
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2">
+          <div class="avatar w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
+               style="background:linear-gradient(135deg,#7c3aed,#ff00a0)">?</div>
+          <input type="text" placeholder="Nombre de la persona"
+                 class="input-glow bg-transparent border-b border-[#2d2d6e] text-white text-sm
+                        font-medium px-0 py-1 w-36 placeholder-[#4a4a8a] transition-all
+                        focus:border-[#00f5ff]"
+                 oninput="actualizarAvatar(this); recalcular()" />
+        </div>
+        <button class="btn-eliminar w-7 h-7 rounded-full flex items-center justify-center
+                       text-[#6b7280] hover:text-[#ff00a0] hover:bg-[#ff00a0]/10
+                       transition-all active:scale-90 flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+               viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Método de pago -->
+      <div class="mb-3">
+        <label class="block text-[10px] text-[#6b7280] uppercase tracking-wide mb-1.5">Método de pago</label>
+        <div class="metodo-btns grid grid-cols-3 gap-1.5 text-xs font-semibold">
+          <button data-metodo="usd_efectivo"
+                  class="metodo-btn py-2 px-1 rounded-xl border border-[#2d2d6e] text-[#6b7280]
+                         transition-all active:scale-95 hover:border-[#00f5ff]/40"
+                  style="background:#13132b">
+            💵 Efectivo
+          </button>
+          <button data-metodo="bs_movil"
+                  class="metodo-btn py-2 px-1 rounded-xl border border-[#2d2d6e] text-[#6b7280]
+                         transition-all active:scale-95 hover:border-[#7c3aed]/40"
+                  style="background:#13132b">
+            📱 Pago Móvil
+          </button>
+          <button data-metodo="usd_zelle"
+                  class="metodo-btn py-2 px-1 rounded-xl border border-[#2d2d6e] text-[#6b7280]
+                         transition-all active:scale-95 hover:border-[#ff00a0]/40"
+                  style="background:#13132b">
+            ⚡ Zelle
+          </button>
+        </div>
+        <!-- Campo oculto que guarda el método seleccionado -->
+        <input type="hidden" class="metodo-valor" value="usd_efectivo" />
+      </div>
+
+      <!-- Monto -->
+      <div>
+        <label class="block text-[10px] text-[#6b7280] uppercase tracking-wide mb-1.5">Monto</label>
+        <div class="relative">
+          <span class="simbolo-moneda absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-[#00f5ff]">$</span>
+          <input type="number" inputmode="decimal" placeholder="0.00" min="0" step="0.01"
+                 class="input-glow monto-input w-full bg-[#0d0d1a] border border-[#2d2d6e] rounded-xl
+                        text-white text-lg font-semibold pl-7 pr-4 py-3
+                        placeholder-[#3a3a6e] transition-all"
+                 oninput="recalcular()" />
+        </div>
+        <!-- Equivalencia en $ cuando el método es Bs -->
+        <p class="equivalencia text-[10px] mt-1.5 text-[#6b7280] min-h-[14px]"></p>
+      </div>
+
+    </div>
+  </template>
+
+  <script src="script.js"></script>
+</body>
+</html>
